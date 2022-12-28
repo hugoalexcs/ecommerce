@@ -1,0 +1,46 @@
+version: "3"
+
+services:
+ myapp:
+   build: 
+    context: .
+    dockerfile: Dockerfile
+ web: #É o nome do serviço que vamos subir, nesse caso, o serviço é web
+  image: nginx:latest #  É a imagem e versão que vamos utilizar, nesse caso, vamos utilizar a imagem do Nginx na sua última versão disponível
+  container_name: nginx # Definimos um nome para nosso container, nesse caso, vamos chamá-lo de “nginx”.
+  restart: always # Por padrão a política de reinicialização do Docker é “no”, ou seja, não reinicia o container em hipótese alguma, nessa linha alteramos essa política para “Always” para que o Docker reinicie o container sempre que necessário.
+  ports: # Nessas duas linhas definimos as portas que vão ser utilizadas pelo nosso servidor web, primeiro a porta que vamos ouvir em nossa máquina e depois a porta que o servidor web está ouvindo no container.
+   - 8000:80
+   # vamos mapear uma pasta de nosso computador para ser a raiz desse nosso servidor e também mapear o arquivo de configurações desse servidor
+  volumes: # Declaração de que vamos mapear volumes nas linhas abaixo.
+   - ./www:/www # Nessa linha declaramos que o diretório www dentro da pasta do nosso projeto vai passar a mapear o diretório www dentro de nosso container.
+   - ./site.conf:/etc/nginx/conf.d/site.conf # Nessa linha declaramos que o arquivo site.conf vai ser passar a mapear o caminho /etc/nginx/conf.d/site.conf dentro do nosso container.
+# Agora que nosso servidor web já está funcionando, vamos configurar o PHP-FPM e fazer a ligação com o serviço web, para isso, vamos abrir novamente o arquivo docker-compose.yml e incluir as seguintes linhas
+  links: # Nessas linhas criamos um link do php para o serviço web tenha acesso a ele
+  - php
+ php: #Definimos o nome do nosso serviço
+  image: php:7.3-fpm #Nome da imagem e versão que iremos utilizar
+  container_name: php-fpm #Definimos o nome do nosso container
+  volumes: #Mapeamos o diretório www de nosso projeto também no container do PHP-FPM para que o mesmo também tenha acesso aos arquivos
+  - ./www:/www
+#Agora que temos o servidor rodando com PHP, vamos configurar o MySQL 5.7
+  links: #Nessas linhas criamos um link do serviço de Banco de Dados para que o PHP tenha acesso a ele
+  - db
+ db: #Aqui definimos o nome do nosso serviço
+  image: mysql:5.7 #Nome da imagem e versão que vamos utilizar.
+  container_name: mysql #Definimos o nome do nosso container.
+  ports: #Nessas duas linhas definimos as portas que vão ser utilizadas pelo nosso servidor MySQL, primeiro a porta que queremos ouvir em nossa máquina e depois a porta que o servidor MySQL está ouvindo no container.
+  - "3306:3306"
+  command: --default-authentication-plugin=mysql_native_password #Nessa linha definimos que vamos utilizar o método nativo de autenticação do MySQL
+  restart: always #Definimos a política de restart do Docker para “Always” para que o Docker reinicie o container sempre que necessário.
+  environment: #Nessa linha dizemos que abaixo vamos definir algumas variáveis de ambiente.
+    MYSQL_ROOT_PASSWORD: root #Definimos a senha do root como “root”.
+    MYSQL_DATABASE: db_ecommerce #Nessa linha definimos que vamos utilizar uma base chamada db_ecommerce, quando subirmos o container a base em questão vai ser criada automaticamente.
+
+ phpmyadmin:
+  image: phpmyadmin
+  restart: always
+  ports:
+    - 8001:80
+  environment:
+    - PMA_ARBITRARY=1
